@@ -37,9 +37,18 @@ function compileOpal() {
   const script = `
     require "opal"
     require "opal/builder"
+    require "rubygems"
 
     builder = Opal::Builder.new
     builder.append_paths("${RUBY_DIR}/lib")
+
+    # Make every gem unitsdb-ruby depends on visible to Opal. Without
+    # this, Opal::Builder::MissingRequire fires on `require "lutaml/model"`.
+    %w[lutaml-model]..each do |g|
+      spec = Gem::Specification.find_by_name(g)
+      builder.append_paths(File.join(spec.gem_dir, "lib"))
+    end
+
     builder.build("unitsdb/opal")
     File.write("${DIST}/unitsdb.js", builder.toString)
   `;
@@ -66,7 +75,7 @@ function dumpBundledData() {
   console.log(`wrote dist/unitsdb-data.json (${(json.length / 1024).toFixed(1)} KiB)`);
 }
 
-function buildFçade() {
+function buildFacade() {
   const entry = path.join(ROOT, "src", "index.js");
   fs.writeFileSync(
     entry,
@@ -136,7 +145,7 @@ function main() {
   ensureDist();
   compileOpal();
   dumpBundledData();
-  buildFaçade();
+  buildFacade();
 
   const pkgPath = path.join(ROOT, "package.json");
   const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
