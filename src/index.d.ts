@@ -1,55 +1,84 @@
 /**
- * @unitsml/unitsdb — TypeScript façade over the Opal-compiled
- * unitsdb-ruby bundle.
+ * @unitsml/unitsdb — JavaScript read API for the UnitsDB units
+ * database.
  *
- * The actual Ruby implementation is compiled by Opal into
- * `dist/unitsdb.js` (UMD) at build time. This module loads that
- * bundle and re-exports the high-level Database surface with
- * JS-friendly names.
- *
- * See https://github.com/unitsml/unitsdb-ruby/blob/main/lib/unitsdb/database.rb
- * for the canonical API documentation.
+ * The actual data lives in `dist/unitsdb-data.json`, dumped at
+ * build time from `Unitsdb::Database#to_json`. The query methods
+ * are pure JS, mirroring the high-level surface of
+ * [`Unitsdb::Database`](https://github.com/unitsml/unitsdb-ruby/blob/main/lib/unitsdb/database.rb).
  */
 
-/// <reference types="node" />
+export type UnitsdbIdentifier = {
+  id: string;
+  type?: string;
+};
 
-declare global {
-  // Opal attaches its runtime + loaded modules to `globalThis.Opal`
-  // when the bundle is loaded outside of a bundler. esbuild handles
-  // the import shape; this declaration covers both modes.
-  // eslint-disable-next-line no-var
-  var Opal: any;
-}
+export type UnitsdbLocalizedString = {
+  value: string;
+  lang?: string;
+};
 
-declare const require: (id: string) => any;
+export type UnitsdbSymbolPresentations = {
+  id?: string;
+  ascii?: string;
+  html?: string;
+  latex?: string;
+  mathml?: string;
+  unicode?: string;
+};
 
-type OpalDatabase = {
-  // Public instance methods on Unitsdb::Database — see database.rb.
-  collection(name: string): any[];
-  findById(id: string, type?: string): any | null;
-  getById(id: string, type?: string): any | null;
-  search(params: { text: string; type?: string }): any[];
-  findBySymbol(symbol: string, entityType?: string): any[];
+export type UnitsdbEntity = {
+  identifiers: UnitsdbIdentifier[];
+  short?: string;
+  names?: UnitsdbLocalizedString[];
+  symbols?: UnitsdbSymbolPresentations[];
+  references?: Array<{ uri?: string; type?: string; authority?: string }>;
+  unit_system_reference?: Array<UnitsdbIdentifier>;
+  quantity_references?: Array<UnitsdbIdentifier>;
+  root_units?: Array<{
+    unit_reference?: UnitsdbIdentifier;
+    prefix_reference?: UnitsdbIdentifier;
+  }>;
+};
+
+export type UnitsdbDatabaseData = {
+  schema_version: string;
+  version?: string;
+  prefixes: UnitsdbEntity[];
+  dimensions: UnitsdbEntity[];
+  units: UnitsdbEntity[];
+  quantities: UnitsdbEntity[];
+  unit_systems: UnitsdbEntity[];
+};
+
+export interface UnitsdbDatabase {
+  schemaVersion: string;
+  version?: string;
+  prefixes: UnitsdbEntity[];
+  dimensions: UnitsdbEntity[];
+  units: UnitsdbEntity[];
+  quantities: UnitsdbEntity[];
+  unit_systems: UnitsdbEntity[];
+
+  collection(name: string): UnitsdbEntity[];
+  findById(id: string, type?: string): UnitsdbEntity | null;
+  getById(id: string, type?: string): UnitsdbEntity | null;
+  findByIdAndType(id: string, idType: string, type?: string): UnitsdbEntity | null;
+  search(text: string, type?: string): UnitsdbEntity[];
+  findBySymbol(symbol: string, entityType?: "units" | "prefixes"): UnitsdbEntity[];
   matchEntities(params: {
     value: string;
-    matchType?: string;
+    matchType?: "exact" | "symbol" | "all";
     entityType?: string;
-  }): Record<string, Array<{ entity: any; matchDesc: string; details: string }>>;
+  }): Record<string, Array<{ entity: UnitsdbEntity; matchDesc: string; details: string }>>;
   validateUniqueness(): { short: Record<string, any>; id: Record<string, any> };
   validateReferences(): Record<string, Record<string, any>>;
+}
+
+export type UnitsdbModule = {
+  bundled(): UnitsdbDatabase;
+  fromJson(json: string | UnitsdbDatabaseData): UnitsdbDatabase;
 };
 
-type UnitsdbModule = {
-  // Loads the bundled database (synchronous — data is pre-parsed at
-  // build time and shipped inside the bundle).
-  bundled(): OpalDatabase;
-  // Loads a database from a JSON string produced by `Database#to_json`.
-  fromJson(json: string): OpalDatabase;
-};
-
-/**
- * Entry point. Import as `import { Unitsdb } from "@unitsml/unitsdb"`.
- */
 export const Unitsdb: UnitsdbModule;
-
 export default Unitsdb;

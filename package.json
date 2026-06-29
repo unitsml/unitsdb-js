@@ -1,6 +1,6 @@
 {
   "name": "@unitsml/unitsdb",
-  "version": "0.0.0",
+  "version": "2.2.4",
   "private": false,
   "description": "UnitsDB units database for JavaScript — Opal-compiled from unitsdb-ruby.",
   "main": "dist/index.js",
