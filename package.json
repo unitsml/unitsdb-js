@@ -1,16 +1,18 @@
 {
   "name": "@unitsml/unitsdb",
-  "version": "2.2.4",
+  "version": "3.0.0",
   "private": false,
-  "description": "UnitsDB units database for JavaScript — Opal-compiled from unitsdb-ruby.",
-  "main": "dist/index.js",
-  "module": "dist/index.mjs",
-  "types": "dist/index.d.ts",
+  "description": "JavaScript release of unitsdb-ruby. Opal-compiled with optional shared runtime from @lutaml/opal-runtime. v3 replaces the JSON+façade approach with a real Ruby class hierarchy.",
+  "main": "./dist/unitsdb-no-opal.js",
+  "module": "./dist/unitsdb-no-opal.js",
+  "browser": "./dist/unitsdb.js",
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs",
-      "require": "./dist/index.js"
+      "browser": "./dist/unitsdb.js",
+      "import": "./dist/unitsdb-no-opal.js",
+      "require": "./dist/unitsdb-no-opal.js",
+      "default": "./dist/unitsdb-no-opal.js"
     }
   },
   "files": [
@@ -19,14 +21,17 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js",
+    "test": "node scripts/test.js"
   },
   "keywords": [
     "units",
     "unitsml",
     "unitsdb",
     "si",
-    "metrology"
+    "metrology",
+    "opal",
+    "ruby"
   ],
   "license": "BSD-2-Clause",
   "repository": {
@@ -40,6 +45,14 @@
   "devDependencies": {
     "esbuild": "^0.23.0",
     "typescript": "^5.5.0"
+  },
+  "peerDependencies": {
+    "@lutaml/opal-runtime": "^1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@lutaml/opal-runtime": {
+      "optional": true
+    }
   },
   "publishConfig": {
     "access": "public"
