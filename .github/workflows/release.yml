@@ -66,18 +66,14 @@ jobs:
           ruby-version: "3.3"
           working-directory: unitsdb-ruby
 
-      - name: Add opal to unitsdb-ruby Gemfile (build-only)
-        if: steps.check.outputs.skip != 'true'
-        run: |
-          printf '\ngem "opal", require: false, group: :development\n' >> Gemfile
-        working-directory: unitsdb-ruby
-
       - name: Bundle install (unitsdb-ruby)
         if: steps.check.outputs.skip != 'true'
         run: |
           rm -f Gemfile.lock
           bundle install --jobs 3 --retry 3
         working-directory: unitsdb-ruby
+      # unitsdb-ruby's Gemfile already pins opal ~> 1.8 — no extra
+      # install needed.
 
       - uses: actions/setup-node@v4
         if: steps.check.outputs.skip != 'true'
