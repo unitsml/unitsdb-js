@@ -5,7 +5,7 @@
 //   unitsdb-ruby/data/      — bundled YAML data files
 //
 // Outputs:
-//   dist/unitsdb.js         — raw Opal-compiled bundle (UMD)
+//   dist/unitsdb.js         — Opal-compiled bundle (Builder API)
 //   dist/unitsdb-data.json  — bundled Database serialized as JSON
 //   dist/index.js           — CJS façade (esbuild)
 //   dist/index.mjs          — ESM façade (esbuild)
@@ -30,30 +30,32 @@ function ensureDist() {
   fs.mkdirSync(DIST, { recursive: true });
 }
 
+// Use Opal::Builder (Ruby API) — more reliable than the `opal` CLI
+// for multi-gem builds. Mirrors the pattern unitsdb-ruby uses in its
+// own Opal boot-file spec.
 function compileOpal() {
-  // Opal compile: lib/unitsdb/opal.rb is the eager-load entry point.
-  const libPath = path.join(RUBY_DIR, "lib");
-  run(
-    [
-      "opal",
-      "-c",
-      "-I", libPath,
-      "--no-opal-cache",
-      "-g", "lutaml-model",
-      "-e", `'require "unitsdb/opal"'`,
-      "-o", path.join(DIST, "unitsdb.js"),
-    ].join(" "),
-    { cwd: RUBY_DIR, env: { ...process.env } },
-  );
+  const script = `
+    require "opal"
+    require "opal/builder"
+
+    builder = Opal::Builder.new
+    builder.append_paths("${RUBY_DIR}/lib")
+    builder.build("unitsdb/opal")
+    File.write("${DIST}/unitsdb.js", builder.toString)
+  `;
+  execSync(`ruby -e '${script.replace(/\n\s*/g, "; ")}'`, {
+    cwd: RUBY_DIR,
+    stdio: "inherit",
+    env: { ...process.env },
+  });
+  const size = fs.statSync(path.join(DIST, "unitsdb.js")).size;
+  console.log(`wrote dist/unitsdb.js (${(size / 1024).toFixed(1)} KiB)`);
 }
 
 function dumpBundledData() {
-  // Serialize the bundled Database to JSON. JS consumers get a
-  // synchronous database with zero YAML parsing at runtime.
   const script = `
     require "unitsdb"
-    db = Unitsdb.database
-    puts db.to_json
+    puts Unitsdb.database.to_json
   `;
   const json = execSync(`ruby -e '${script.replace(/\n\s*/g, "; ")}'`, {
     cwd: RUBY_DIR,
@@ -64,7 +66,7 @@ function dumpBundledData() {
   console.log(`wrote dist/unitsdb-data.json (${(json.length / 1024).toFixed(1)} KiB)`);
 }
 
-function buildFaçade() {
+function buildFçade() {
   const entry = path.join(ROOT, "src", "index.js");
   fs.writeFileSync(
     entry,
@@ -92,20 +94,17 @@ module.exports = { Unitsdb: { bundled, fromJson } };
 `,
   );
 
-  // CJS build
   esbuild.buildSync({
     entryPoints: [entry],
     bundle: true,
     platform: "node",
     format: "cjs",
     outfile: path.join(DIST, "index.js"),
-    // Bundle the data file inline so the npm tarball is portable.
     loader: { ".json": "text" },
     define: { "process.env.NODE_ENV": '"production"' },
     target: "node16",
   });
 
-  // ESM build
   esbuild.buildSync({
     entryPoints: [entry],
     bundle: true,
@@ -117,7 +116,6 @@ module.exports = { Unitsdb: { bundled, fromJson } };
     target: "es2020",
   });
 
-  // Copy TypeScript definitions
   fs.copyFileSync(
     path.join(ROOT, "src", "index.d.ts"),
     path.join(DIST, "index.d.ts"),
@@ -140,7 +138,6 @@ function main() {
   dumpBundledData();
   buildFaçade();
 
-  // Bump package.json version so `npm publish` ships with the right tag.
   const pkgPath = path.join(ROOT, "package.json");
   const pkg = JSON.parse(fs.readFileSync(pkgPath, "utf-8"));
   pkg.version = version;
