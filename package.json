@@ -1,0 +1,47 @@
+{
+  "name": "@unitsml/unitsdb",
+  "version": "0.0.0",
+  "private": false,
+  "description": "UnitsDB units database for JavaScript — Opal-compiled from unitsdb-ruby.",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "node scripts/build.js"
+  },
+  "keywords": [
+    "units",
+    "unitsml",
+    "unitsdb",
+    "si",
+    "metrology"
+  ],
+  "license": "BSD-2-Clause",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/unitsml/unitsdb-js"
+  },
+  "homepage": "https://github.com/unitsml/unitsdb-js#readme",
+  "bugs": {
+    "url": "https://github.com/unitsml/unitsdb-js/issues"
+  },
+  "devDependencies": {
+    "esbuild": "^0.23.0",
+    "typescript": "^5.5.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
