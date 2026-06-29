@@ -31,8 +31,10 @@ function ensureDist() {
   fs.mkdirSync(DIST, { recursive: true });
 }
 
-// Write `source` to a temp .rb file and run it with `ruby`. Avoids
-// the backtick/escape minefield of `ruby -e "<ruby with backticks>"`.
+// Write `source` to a temp .rb file and run it with `bundle exec ruby`
+// (so we see gems in unitsdb-ruby's bundle, including the build-only
+// `opal` the workflow pins in the Gemfile). Avoids the backtick/escape
+// minefield of `ruby -e`.
 function runRuby(source, opts = {}) {
   const tmp = path.join(
     fs.mkdtempSync(path.join(os.tmpdir(), "unitsdb-js-")),
@@ -40,7 +42,7 @@ function runRuby(source, opts = {}) {
   );
   fs.writeFileSync(tmp, source);
   try {
-    execSync(`ruby ${tmp}`, {
+    execSync(`bundle exec ruby ${tmp}`, {
       cwd: RUBY_DIR,
       stdio: "inherit",
       env: { ...process.env },
@@ -89,7 +91,7 @@ puts Unitsdb.database.to_json
   );
   fs.writeFileSync(tmp, script);
   try {
-    const json = execSync(`ruby ${tmp}`, {
+    const json = execSync(`bundle exec ruby ${tmp}`, {
       cwd: RUBY_DIR,
       encoding: "utf-8",
       env: { ...process.env },
