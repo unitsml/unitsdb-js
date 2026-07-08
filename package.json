@@ -2,7 +2,7 @@
   "name": "@unitsml/unitsdb",
   "version": "3.0.0",
   "private": false,
-  "description": "JavaScript release of unitsdb-ruby. Opal-compiled with optional shared runtime from @lutaml/opal-runtime. v3 replaces the JSON+façade approach with a real Ruby class hierarchy.",
+  "description": "JavaScript release of unitsdb-ruby. Opal-compiled with optional shared runtime from @lutaml/opal-runtime. v3 replaces the JSON+fa\u00e7ade approach with a real Ruby class hierarchy.",
   "main": "./dist/unitsdb-no-opal.js",
   "module": "./dist/unitsdb-no-opal.js",
   "browser": "./dist/unitsdb.js",
@@ -44,7 +44,8 @@
   },
   "devDependencies": {
     "esbuild": "^0.23.0",
-    "typescript": "^5.5.0"
+    "typescript": "^5.5.0",
+    "@lutaml/opal-runtime": "^1.0.0"
   },
   "peerDependencies": {
     "@lutaml/opal-runtime": "^1.0.0"
