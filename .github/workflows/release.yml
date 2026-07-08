@@ -18,9 +18,13 @@ on:
   workflow_dispatch:
     inputs:
       next_version:
-        description: "Version to publish (x.y.z, major, minor, patch, skip)"
+        description: "npm version to publish (x.y.z, major, minor, patch, skip)"
         required: true
         default: 'skip'
+      ruby_ref:
+        description: "unitsdb-ruby git ref to compile from (e.g. v2.2.4, main). Leave empty to use version from repository_dispatch or 'main'."
+        required: false
+        default: ''
   repository_dispatch:
     types: [ do-release ]
 
@@ -66,7 +70,7 @@ jobs:
         run: node scripts/build.js
         env:
           VERSION: ${{ steps.ver.outputs.version }}
-          RUBY_REF: ${{ github.event.client_payload.ruby_ref || format('v{0}', steps.ver.outputs.version) }}
+          RUBY_REF: ${{ github.event.inputs.ruby_ref || github.event.client_payload.ruby_ref || 'main' }}
           OPAL_PREFORK_DISABLE: "1"
 
       - name: Smoke test
