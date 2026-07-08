@@ -1,95 +1,86 @@
 name: release
 
-on:
-  repository_dispatch:
-    types: [do-release]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version of unitsdb-ruby to compile and publish (e.g., 2.2.5)"
-        required: true
+# npm Trusted Publishing via GitHub OIDC.
+#
+# Requires Trusted Publisher configured on npmjs.com:
+#   Package → Settings → Publishing access → Add Trusted Publisher
+#   Repository: <org>/<repo>
+#   Workflow filename: release.yml
+#   Environment: npm
+#
+# The package must exist on npm before Trusted Publisher works.
+# For the FIRST publish, run locally:
+#   npm publish --access public
+# Then configure Trusted Publisher on npmjs.com, then this workflow
+# takes over subsequent releases.
 
 permissions:
   contents: read
+  id-token: write
+
+on:
+  workflow_dispatch:
+    inputs:
+      next_version:
+        description: |
+          Version to publish (x.y.z). Use "skip" to publish the
+          version currently in package.json without bumping.
+        required: true
+        default: 'skip'
+  repository_dispatch:
+    types: [ do-release ]
 
 jobs:
   release:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    environment: npm
     steps:
-      - name: Resolve version + ruby_ref
-        id: meta
-        run: |
-          if [ "${{ github.event_name }}" = "repository_dispatch" ]; then
-            VERSION="${{ github.event.client_payload.version }}"
-            RUBY_REF="${{ github.event.client_payload.ruby_ref }}"
-          else
-            VERSION="${{ github.event.inputs.version }}"
-            RUBY_REF="v${VERSION}"
-          fi
-          if [ -z "$VERSION" ] || [ "$VERSION" = "null" ]; then
-            echo "No version supplied; aborting."
-            exit 1
-          fi
-          echo "version=$VERSION"       >> "$GITHUB_OUTPUT"
-          echo "ruby_ref=$RUBY_REF"     >> "$GITHUB_OUTPUT"
-          echo "Resolved: version=$VERSION ruby_ref=$RUBY_REF"
-
-      - name: Idempotency check (skip if already published)
-        id: check
-        run: |
-          set +e
-          PUBLISHED=$(npm view "@unitsml/unitsdb@${{ steps.meta.outputs.version }}" version 2>/dev/null)
-          if [ -n "$PUBLISHED" ]; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "::warning::@unitsml/unitsdb@${{ steps.meta.outputs.version }} is already on npm; skipping publish."
-          else
-            echo "skip=false" >> "$GITHUB_OUTPUT"
-            echo "Not yet published; proceeding."
-          fi
-
       - uses: actions/checkout@v6
-        if: steps.check.outputs.skip != 'true'
 
-      - name: Checkout unitsdb-ruby at ${{ steps.meta.outputs.ruby_ref }}
-        if: steps.check.outputs.skip != 'true'
-        uses: actions/checkout@v6
-        with:
-          repository: unitsml/unitsdb-ruby
-          ref: ${{ steps.meta.outputs.ruby_ref }}
-          path: unitsdb-ruby
-          submodules: true
-
-      - uses: ruby/setup-ruby@v1
-        if: steps.check.outputs.skip != 'true'
-        with:
-          ruby-version: "3.3"
-          working-directory: unitsdb-ruby
-
-      - name: Bundle install (unitsdb-ruby)
-        if: steps.check.outputs.skip != 'true'
+      - name: Resolve version
+        id: ver
         run: |
-          rm -f Gemfile.lock
-          bundle install --jobs 3 --retry 3
-        working-directory: unitsdb-ruby
-      # unitsdb-ruby's Gemfile already pins opal ~> 1.8 — no extra
-      # install needed.
+          VERSION="${{ github.event.client_payload.version || github.event.inputs.next_version }}"
+          if [ -z "$VERSION" ] || [ "$VERSION" = "skip" ]; then
+            VERSION=$(node -p "require('./package.json').version")
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing version $VERSION"
 
-      - uses: actions/setup-node@v4
-        if: steps.check.outputs.skip != 'true'
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
 
-      - run: npm install --no-audit --no-fund
-        if: steps.check.outputs.skip != 'true'
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+
+      - name: Install Opal
+        run: gem install opal --no-document
+
+      - name: Install JS deps
+        run: npm install
 
       - name: Build
-        if: steps.check.outputs.skip != 'true'
-        run: npm run build -- --version=${{ steps.meta.outputs.version }}
-
-      - name: Publish
-        if: steps.check.outputs.skip != 'true'
-        run: npm publish --access public
+        run: node scripts/build.js
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ steps.ver.outputs.version }}
+          RUBY_REF: ${{ github.event.client_payload.ruby_ref || format('v{0}', steps.ver.outputs.version) }}
+          OPAL_PREFORK_DISABLE: "1"
+
+      - name: Smoke test
+        run: node scripts/test.js
+
+      - name: Set package version
+        run: |
+          VERSION="${{ steps.ver.outputs.version }}"
+          if [ "$VERSION" != "$(node -p "require('./package.json').version")" ]; then
+            npm version "$VERSION" --no-git-tag-version
+          fi
+
+      - name: Publish to npm (Trusted Publisher via OIDC)
+        run: npm publish --provenance --access public
