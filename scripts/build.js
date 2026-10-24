@@ -37,7 +37,7 @@ function ensureDir(p) { fs.mkdirSync(p, { recursive: true }); }
 function checkoutUnitsdbRuby() {
   rmrf(TMP);
   ensureDir(TMP);
-  run(`git clone --depth 1 --branch #{RUBY_REF} --recurse-submodules #{RUBY_REPO} #{TMP}`);
+  run(`git clone --depth 1 --branch ${RUBY_REF} --recurse-submodules ${RUBY_REPO} ${TMP}`);
   run("bundle install", { cwd: TMP });
 }
 
