@@ -1,5 +1,13 @@
 # @unitsml/unitsdb
 
+> **DEPRECATED.** This Opal-compiled package is retired — it never
+> shipped a usable data story (`Unitsdb.bundled()` was never
+> implemented), and the TypeScript stack supersedes it: the units
+> dataset ships natively inside
+> [`@unitsml/unitsml-ts`](https://github.com/unitsml/unitsml-ts).
+> No further releases will be made here.
+
+
 JavaScript release of [unitsdb-ruby](https://github.com/unitsml/unitsdb-ruby), published as [`@unitsml/unitsdb`](https://www.npmjs.com/package/@unitsml/unitsdb) on npm.
 
 This is a **release-only repo**. All source lives in [`unitsml/unitsdb-ruby`](https://github.com/unitsml/unitsdb-ruby); this repo just packages the database and a thin JS read API. Don't edit `dist/` — it is rebuilt from the Ruby source on every release.
